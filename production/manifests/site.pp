@@ -7,11 +7,14 @@
 #}
 
 
-node 'node1.example.com' {
+node 'node2.example.com' {
 
 #	notify { 'this id test !!': }
 
-	class { 'web':   }
+	class { 'nfsshare':   }
+
+	hiera_include('classes')
+
 
 #notify { "i know u r ${facts['os']['family']} , ur ip is ${facts['networking']['interfaces']['enp0s3']['ip']} ": }
 
