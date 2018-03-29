@@ -1,1 +1,1 @@
-# Welogic Puppet Modules / FMW Modules
+# Weblogic Puppet Modules / FMW Modules
