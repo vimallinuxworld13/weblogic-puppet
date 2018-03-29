@@ -1,0 +1,1431 @@
+Vimal Daga
+
+
+# cd  /etc/yum.repos.d/
+# vim  rhel.repo
+i
+
+[rhel]
+baseurl=file:///run/media/root/RHEL-7.3\ Server.x86_64
+gpgcheck=0
+
+
+esc
+:wq
+
+
+# yum  repolist
+
+
+[root@localhost ~]# getenforce 
+[root@localhost ~]# setenforce  0
+
+
+[root@localhost ~]# vim  /etc/selinux/config 
+SELINUX=permissive
+
+[root@localhost ~]# init 0 
+
+
+
+
+
+
+
+
+
+
+[root@localhost ~]# ifconfig  enp0s3
+[root@localhost ~]# hostnamectl   set-hostname node1.example.com
+
+[root@localhost ~]# exec bash
+
+
+[root@node1 ~]# vim /etc/hosts
+192.168.56.101  node1.example.com
+
+
+
+[root@node1 ~]# ping  node1.example.com
+
+
+[root@node1 Downloads]# rpm  -ivh puppet-agent-5.3.5-1.el7.x86_64.rpm
+
+
+puppet binary :
+/opt/puppetlabs/bin
+
+
+
+apache web server :
+rpm  -q httpd
+
+yum  remove httpd 
+
+
+
+
+[root@node1 ~]# mkdir  /code
+[root@node1 ~]# cd  /code
+
+# manifest file in puppet (program file)
+
+
+[root@node1 code]# vim setup.pp
+
+
+
+
+puppet DSL (domain specific language) : JSON syntax :
+
+
+
+resource type  {  'label name':
+	attribute1 => 'value',
+	attribute2 => 'value',
+}
+
+
+[root@node1 code]# cat setup.pp
+package { 'httpd':
+        ensure => present,
+}
+
+
+
+[root@node1 code]# puppet  apply setup.pp
+
+
+[root@node1 code]# rpm  -q httpd
+
+
+
+
+idempotance : save time / memory   (  current state  == desired state )
+
+
+[root@node1 code]# cat user.pp
+user { 'vimal':
+  ensure           => 'present',
+  comment          => 'vimal daga',
+  home             => '/home/vimal',
+  password         => '!!',
+  shell            => '/bin/bash',
+}
+
+
+
+
+[root@node1 code]# puppet apply user.pp
+
+
+
+[root@node1 code]# puppet resource user  vimal
+
+
+
+[root@node1 code]# puppet resource user
+
+
+
+[root@node1 code]# puppet describe -l
+
+
+
+[root@node1 code]# puppet describe  package  --providers  |  less
+
+
+
+
+
+
+[root@node1 code]# cat user.pp
+user { 'harry':
+  ensure           => 'present',
+  comment          => 'thiis is harry',
+  home             => '/home/harry',
+  password         =>  generate('/bin/sh' , '-c' , "echo  redhat   |  openssl passwd  -1  -stdin | tr -d '\n' " ),
+  shell            => '/bin/bash',
+}
+
+
+
+
+
+
+
+
+
+
+Configure Puppet Master :
+
+
+[root@localhost ~]# hostnamectl set-hostname  master.example.com
+[root@localhost ~]# exec bash
+[root@master ~]# vim /etc/hosts
+[root@master ~]# ping master.example.com
+
+
+
+
+[root@master ~]# cat /etc/hosts
+
+192.168.56.102  master.example.com
+192.168.56.101  node1.example.com
+
+
+[root@master ~]# scp  /etc/hosts   node1.example.com:/etc/hosts
+
+
+
+
+[root@master Downloads]# tar -xvzf puppet-enterprise-2017.3.5-el-7-x86_64.tar.gz -C  /opt/
+
+
+[root@master opt]# cd /opt/puppet-enterprise-2017.3.5-el-7-x86_64/
+
+# iptables  -F
+
+
+# ./puppet-enterprise-installer
+
+/etc/puppetlabs/enterprise/conf.d/pe.conf
+
+
+
+
+
+Configure Agent:
+------------------
+
+
+[root@node1 ~]# rpm  -q puppet-agent
+puppet-agent-5.3.5-1.el7.x86_64
+
+
+[root@node1 ~]# vim  /etc/puppetlabs/puppet/puppet.conf
+
+
+[main]
+server = master.example.com
+
+
+At node side :
+[root@node1 ~]# puppet agent  -t
+
+At master side :
+# puppet cert list  --all
+# puppet cert list
+# puppet cert sign  node1.example.com
+# puppet cert list
+# puppet cert list -all
+
+
+At node side :
+[root@node1 ~]# puppet agent  -t
+
+
+
+
+
+[root@master ~]# cd /etc/puppetlabs/code/environments/production/manifests/
+
+# vim site.pp
+
+node 'node1.example.com' {
+        package { 'httpd':
+                ensure => present,
+        }
+
+}
+
+
+
+node default {
+
+        notify { 'hey this is master boardcasting !!': }
+  # This is where you can declare classes for all nodes.
+  # Example:
+  #   class { 'my_class': }
+}
+
+
+
+
+
+
+[root@node1 ~]# puppet agent -t
+
+
+
+
+
+
+
+
+
+
+[root@master ~]# cd  /etc/systemd/system/multi-user.target.wants/
+[root@master multi-user.target.wants]# ls -l pe-*
+[root@master multi-user.target.wants]# systemctl status pe-puppetserver.service
+[root@master multi-user.target.wants]# systemctl start pe-puppetserver.service
+
+
+[root@master ~]# ssh-keygen  -t rsa  -b 4096 -C "vdaga@lwindia.com"
+
+# yum  install git -y
+
+# git clone  git@github.com:vimallinuxworld13/puppet-web-wellsfargo.git
+
+
+[root@master tmp]# cd /etc/puppetlabs/code/environments/production/manifests/
+[root@master manifests]# vim site.pp
+comment all line, that we did before
+
+
+module path for puppet :
+[root@master manifests]# cd /etc/puppetlabs/code/environments/production/modules/
+
+[root@master modules]# puppet module generate  vimal-web
+We need to create a metadata.json file for this module.  Please answer the
+    following questions; if the question is not applicable to this module, feel free
+    to leave it blank.
+
+Puppet uses Semantic Versioning (semver.org) to version modules.
+What version is this module?  [0.1.0]
+-->
+
+Who wrote this module?  [vimal]
+--> Vimal Daga <vdaga@lwindia.com>
+
+What license does this module code fall under?  [Apache-2.0]
+-->
+
+How would you describe this module in a single sentence?
+--> this is test module for web services deploye^H^H^Hment
+
+Where is this module's source code repository?
+--> https://github.com/vimallinuxworld13/puppet-web-wellsfargo
+
+Where can others go to learn more about this module?  [https://github.com/vimallinuxworld13/puppet-web-wellsfargo]
+-->
+
+Where can others go to file issues about this module?  [https://github.com/vimallinuxworld13/puppet-web-wellsfargo/issues]
+-->
+
+----------------------------------------
+{
+  "name": "vimal-web",
+  "version": "0.1.0",
+  "author": "Vimal Daga <vdaga@lwindia.com>",
+  "summary": "this is test module for web services deploye\b\b\bment",
+  "license": "Apache-2.0",
+  "source": "https://github.com/vimallinuxworld13/puppet-web-wellsfargo",
+  "project_page": "https://github.com/vimallinuxworld13/puppet-web-wellsfargo",
+  "issues_url": "https://github.com/vimallinuxworld13/puppet-web-wellsfargo/issues",
+  "dependencies": [
+    {
+      "name": "puppetlabs-stdlib",
+      "version_requirement": ">= 1.0.0"
+    }
+  ],
+  "data_provider": null
+}
+----------------------------------------
+
+About to generate this metadata; continue? [n/Y]
+--> Y
+
+
+
+
+module web:
+-------------
+# cd /etc/puppetlabs/code/environments/production/modules/web
+[root@master web]# cat metadata.json
+
+
+
+# vim README.md
+# git init
+# git add .
+# git commit -a -m "this is first commit for web module"
+# git status
+
+
+# git remote add origin git@github.com:vimallinuxworld13/puppet-web-wellsfargo.git
+
+# git push -u origin master
+
+
+
+
+
+# /etc/puppetlabs/code/environments/production/modules/web/manifests
+# vim init.pp
+
+
+class web {
+
+
+        package { 'httpd':
+                ensure => present,
+                }
+
+
+}
+
+
+
+[root@master manifests]# vim /etc/puppetlabs/code/environments/production/manifests/site.pp
+
+
+node 'node1.example.com' {
+
+#       notify { 'this id test !!': }
+
+        class { 'web':   }
+
+
+
+}
+
+
+
+
+
+# /etc/puppetlabs/code/environments/production/modules/web
+# mkdir files
+# cd files
+# vim index.html
+
+
+clean web server :
+[root@node1 ~]# systemctl stop httpd
+[root@node1 ~]# rm /var/www/html/index.html
+rm: remove regular file ‘/var/www/html/index.html’? y
+[root@node1 ~]#
+[root@node1 ~]# yum  remove httpd -y
+
+
+
+Deploy apache web server using puppet:
+-------------------------------------
+
+
+# cd /etc/puppetlabs/code/environments/production/modules/web/manifests
+# vim init.pp
+
+class web {
+
+
+
+package { 'web software':
+        ensure => present,
+        name   => 'httpd',
+        }
+
+
+file { 'deploy web page':
+        ensure => file,
+        path => '/var/www/html/index.html',
+        source => 'puppet:///modules/web/index.html',
+        owner => 'apache',
+        mode => '0644',
+}
+
+service { 'web services':
+        ensure => running,
+        name => 'httpd',
+        enable => true,
+}
+
+
+}
+
+
+[root@master manifests]# puppet parser validate init.pp
+
+
+
+[root@master manifests]# vim /etc/puppetlabs/code/environments/production/manifests/site.pp
+
+node 'node1.example.com' {
+
+#       notify { 'this id test !!': }
+
+        class { 'web':   }
+
+
+
+}
+
+
+
+
+
+[root@node1 ~]# puppet resource  file  /var/www/html/index.html
+
+
+
+Create sub classes :
+----------------------
+
+# cd /etc/puppetlabs/code/environments/production/modules/web/manifests
+
+# cat init.pp
+class web {
+
+        class { 'web::install': }
+        class { 'web::webdeploy': }
+        class { 'web::service': }
+
+}
+
+
+
+[root@master manifests]# cat  install.pp
+class web::install {
+
+        package { 'web software':
+                ensure => present,
+                name   => 'httpd',
+        }
+}
+
+
+[root@master manifests]# cat webdeploy.pp
+class web::webdeploy {
+
+        file { 'deploy web page':
+                ensure => file,
+                path   => '/var/www/html/index.html',
+                source => 'puppet:///modules/web/index.html',
+                owner  => 'apache',
+                mode   => '0644',
+        }
+
+}
+
+
+
+
+[root@master manifests]# cat service.pp
+class  web::service  {
+
+        service { 'web services':
+                ensure => running,
+                name   => 'httpd',
+                enable => true,
+        }
+
+}
+
+
+
+
+
+
+
+push to git hub :
+----------------
+
+# cd /etc/puppetlabs/code/environments/production/modules/web
+# git add .
+# git commit -a -m "comment"
+# git push -u origin master
+
+
+[root@node1 ~]# facter  os.family
+
+[root@node1 ~]# facter   networking.interfaces.enp0s3.ip
+
+
+
+[root@master manifests]# vim /etc/puppetlabs/code/environments/production/manifests/site.pp
+
+node 'node1.example.com' {
+
+#       notify { 'this id test !!': }
+
+#       class { 'web':   }
+
+notify { "i know u r ${facts['os']['family']} , ur ip is ${facts['networking']['interfaces']['enp0s3']['ip']} ": }
+
+
+}
+
+
+
+
+
+
+[root@master manifests]# cat install.pp
+class web::install {
+
+# $package_name = "something"
+
+
+if $facts['os']['family'] == "RedHat"
+{
+        $package_name = "httpd"
+}
+elsif  $facts['os']['family'] == "Debian"
+{
+        $package_name = "apache2"
+}
+else
+{
+        fail('not supported')
+}
+
+
+
+
+
+        package { 'web software':
+                ensure => present,
+                name   => $package_name,
+        }
+}
+
+
+
+
+
+
+-------------------------------------------------------------
+
+
+[root@master manifests]# cat params.pp
+class  web::params {
+
+
+case $facts['os']['family'] {
+
+
+'RedHat': {
+
+$package_name = "httpd"
+$service_name = "httpd"
+$server_ip = $facts['networking']['interfaces']['enp0s3']['ip']
+
+}
+
+'Debian': {
+
+$package_name = "apache2"
+$service_name = "apache2"
+$server_ip = $facts['networking']['interfaces']['enp0s3']['ip']
+
+}
+
+
+#'Windows': {
+#
+#}
+
+default: {
+        fail("ur OS not supported")
+}
+
+
+
+}
+
+
+}
+
+
+
+
+
+
+
+# cat init.pp
+class web(
+
+
+String $class_package_name = $::web::params::package_name,
+String $class_service_name = $::web::params::service_name,
+String $class_server_ip    = $::web::params::server_ip,
+
+
+
+)   inherits ::web::params {
+
+        class { 'web::install': }
+        class { 'web::webdeploy': }
+        class { 'web::service': }
+
+}
+
+
+
+[root@master manifests]# cat install.pp
+class web::install(
+
+String $local_package_name = $::web::class_package_name,
+
+)   {
+
+        package { 'web software':
+                ensure => present,
+                name   => $local_package_name,
+        }
+}
+
+
+
+
+
+
+------------------------------------
+
+
+class  web {
+
+service { 'httpd':
+        ensure => running,
+#       require => Package['httpd'],
+}
+
+
+package { 'httpd':
+        ensure => present,
+        before => Service['httpd'],
+}
+
+
+
+}
+
+
+
+
+
+
+class web(
+
+
+String $class_package_name = $::web::params::package_name,
+String $class_service_name = $::web::params::service_name,
+String $class_server_ip    = $::web::params::server_ip,
+
+
+
+)   inherits ::web::params {
+
+#       class { 'web::install':
+#               before => Class['web::service']
+#}
+#
+#       class { 'web::webdeploy': }
+#       class { 'web::service':
+#               require => Class['web::install']
+
+#}
+
+
+class { 'web::install': }
+class { 'web::webdeploy': }
+class { 'web::service': }
+
+Class['web::install']  -> Class['web::webdeploy'] ->  Class['web::service']
+
+
+
+
+}
+
+
+
+
+# yum  install httpd
+
+# mkdir /var/www/vimal
+
+[root@node1 ~]# cd  /etc/httpd/conf.d/
+[root@node1 conf.d]# vim vimal.conf
+
+<Virtualhost 192.168.56.101:80>
+DocumentRoot /var/www/vimal
+</Virtualhost>
+
+
+
+# cd /var/www/vimal
+# vim index.html
+
+# systemctl  restart httpd
+
+
+
+
+
+
+
+[root@master manifests]# cat webdeploy.pp
+class web::webdeploy {
+
+        file { 'deploy web page':
+                ensure => file,
+                path   => '/var/www/vimal/index.html',
+                source => 'puppet:///modules/web/index.html',
+                owner  => 'apache',
+                mode   => '0644',
+        }
+
+}
+
+
+
+
+
+
+[root@master manifests]# cat docroot.pp
+class web::docroot {
+
+
+file { 'my doc root':
+        ensure => directory,
+        path   => "/var/www/vimal",
+        owner  => 'apache',
+        mode   => '0755',
+}
+
+}
+
+
+
+
+[root@master manifests]# cat webconf.pp
+class web::webconf {
+
+        file { 'deploy conf file':
+        ensure => file,
+        path   => '/etc/httpd/conf.d/vimal.conf',
+        source => 'puppet:///modules/web/vimal.conf',
+        owner  => 'apache',
+        mode   => '0644',
+}
+
+}
+
+
+
+[root@master manifests]# cd ../files/
+
+
+[root@master files]# cat vimal.conf
+<Virtualhost 192.168.56.101:80>
+DocumentRoot /var/www/vimal
+</Virtualhost>
+
+
+
+# cat init.pp
+class web(
+
+
+String $class_package_name = $::web::params::package_name,
+String $class_service_name = $::web::params::service_name,
+String $class_server_ip    = $::web::params::server_ip,
+
+
+
+)   inherits ::web::params {
+
+#       class { 'web::install':
+#               before => Class['web::service']
+#}
+#
+#       class { 'web::webdeploy': }
+#       class { 'web::service':
+#               require => Class['web::install']
+#}
+
+
+class { 'web::install': }
+class { 'web::docroot': }
+class { 'web::webconf': }
+class { 'web::webdeploy': }
+class { 'web::service': }
+
+Class['web::install']  ->  Class['web::docroot'] ->  Class['web::webconf'] ->  Class['web::webdeploy'] ->  Class['web::service']
+
+
+
+
+}
+# cd /etc/puppetlabs/code/environments/production/modules/web
+[root@master web]# mkdir  templates
+
+
+# cp ../files/vimal.conf   .
+
+
+
+
+# cd /etc/puppetlabs/code/environments/production/modules/web/templates
+[root@master templates]# cat vimal.conf
+<Virtualhost  <%= @facts['networking']['interfaces']['enp0s3']['ip']   %>:80>
+DocumentRoot /var/www/vimal
+</Virtualhost>
+
+
+
+
+# cat webconf.pp
+class web::webconf {
+
+        file { 'deploy conf file':
+        ensure => file,
+        path   => '/etc/httpd/conf.d/vimal.conf',
+#       source => 'puppet:///modules/web/vimal.conf',
+        content => template('web/vimal.conf'),
+        owner  => 'apache',
+        mode   => '0644',
+}
+
+}
+
+
+
+
+
+
+
+
+
+# cd /etc/puppetlabs/code/environments/production/hieradata
+[root@master hieradata]# cat common.yaml
+---
+name: vimal
+
+
+
+[root@master hieradata]# cat /etc/puppetlabs/puppet/hiera.yaml
+---
+:backends:
+  - yaml
+
+
+:hierarchy:
+  - common
+
+:yaml:
+  :datadir: /etc/puppetlabs/code/environments/production/hieradata
+
+
+
+
+
+[root@master hieradata]# systemctl restart pe-puppetserver           
+
+
+
+
+notify { hiera('name'):  }
+
+
+
+
+Install middleware module from oracle :
+-----------------------------------
+
+cd /etc/puppetlabs/code/environments/production/modules
+git clone https://github.com/oracle/fmw-puppet-modules.git
+cp -rfv fmw-puppet-modules/*  .
+rm -rfv fmw-puppet-modules
+
+
+
+
+Weblogic deployment :
+----------------------
+
+[root@node1 ~]# mkdir  /weblogic
+[root@node1 ~]# git clone https://github.com/oracle/fmw-puppet-modules.git
+[root@node1 ~]# puppet  module install  puppetlabs-stdlib  --target-dir       /weblogic/modules
+[root@node1 ~]# cp -rfv  fmw-puppet-modules/*  /weblogic/modules/
+
+
+[root@node1 ~]# cd /weblogic/
+
+[root@node1 weblogic]# vim hiera.yaml
+
+[root@node1 weblogic]# mkdir hieradata
+
+
+
+[root@node1 weblogic]# cat /weblogic/hiera.yaml
+---
+
+:backends:
+  - yaml
+
+:yaml:
+  :datadir: /weblogic/hieradata
+
+:hierarchy:
+  - common
+
+
+
+
+
+
+[root@node1 weblogic]# vim /weblogic/hieradata/common.yaml
+
+
+
+
+[root@node1 weblogic]# mkdir  /repo
+[root@node1 weblogic]# cd /repo
+[root@node1 repo]# ls
+[root@node1 repo]# wget ftp://192.168.2.225/jdk-8u161-linux-x64.tar.gz
+
+
+
+# wget ftp://192.168.2.225/fmw_12.2.1.3.0_infrastructure_Disk1_1of1.zip
+
+
+
+[root@node1 repo]# unzip  fmw_12.2.1.3.0_infrastructure_Disk1_1of1.zip
+
+
+
+
+----------------------------------------------------------------
+
+[root@node1 repo]# cat /weblogic/hieradata/common.yaml
+---
+
+# manifest classes to run
+#
+classes:
+  - fmw_jdk::rng_service
+  - fmw_jdk::install
+  - fmw_wls::setup
+  - fmw_wls::install
+
+
+java_home_dir:          &java_home_dir          '/usr/java/jdk1.8.0_161'
+version:                &version                '12.2.1'
+middleware_home_dir:    &middleware_home_dir    '/opt/oracle/middleware'
+weblogic_home_dir:      &weblogic_home_dir      '/opt/oracle/middleware/wlserver'
+
+
+
+domain_name:            &domain_name            'base_domain'
+weblogic_password:      &weblogic_password      'Redhat01'
+listen_address:         &listen_address         '192.168.56.101'
+
+
+fmw_jdk::install::java_home_dir:        *java_home_dir
+fmw_jdk::install::source_file:          '/repo/jdk-8u161-linux-x64.tar.gz'
+
+
+fmw_wls::version:                       *version
+fmw_wls::middleware_home_dir:           *middleware_home_dir
+
+
+fmw_wls::install::java_home_dir:        *java_home_dir
+fmw_wls::install::source_file:          '/repo/fmw_12.2.1.3.0_infrastructure.jar'
+fmw_wls::install::install_type:         'infra'
+
+
+
+
+-----------------------------------------------------------------
+
+
+
+[root@node1 weblogic]# cat /weblogic/site.pp
+node    default {
+
+hiera_include('classes')
+
+
+
+}
+
+
+
+
+
+
+[root@localhost ~]# cat /etc/sysconfig/network-scripts/ifcfg-enp0s3
+BOOTPROTO="static"
+IPADDR=192.168.56.103
+NETMASK=255.255.255.0
+[root@localhost ~]# systemctl restart network
+
+[root@localhost ~]# hostnamectl  set-hostname  node2.example.com
+[root@localhost ~]# exec   bash
+
+[root@node2 ~]# cat /etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+192.168.56.101  node1.example.com
+192.168.56.103  node2.example.com
+192.168.56.102  master.example.com
+[root@node2 ~]# scp  /etc/hosts  master.example.com:/etc/hosts
+
+
+[root@node2 ~]# iptables  -F
+
+[root@node2 ~]# wget ftp://192.168.2.225/puppet-agent-5.3.5-1.el7.x86_64.rpm
+[root@node2 ~]# rpm  -ivh puppet-agent-5.3.5-1.el7.x86_64.rpm
+
+###### unattended registery
+
+
+
+[root@node2 ~]# vim /etc/puppetlabs/puppet/puppet.conf
+
+
+[main]
+server = master.example.com
+
+
+
+[root@node2 ~]# exec  bash
+[root@node2 ~]# puppet agent -t
+
+
+
+At master :
+--------------
+[root@master ~]# puppet cert sign  node2.example.com
+
+
+
+
+
+
+
+[root@master environments]# pwd
+/etc/puppetlabs/code/environments
+[root@master environments]# ls
+production
+[root@master environments]# pwd
+/etc/puppetlabs/code/environments
+[root@master environments]# git init
+Initialized empty Git repository in /etc/puppetlabs/code/environments/.git/
+[root@master environments]# vim README.md
+[root@master environments]# ls
+production  README.md
+[root@master environments]# git add .
+[root@master environments]# git commit -a -m  "initial comments"    
+
+
+
+[root@master environments]# git remote add origin git@github.com:vimallinuxworld13/weblogic-puppet.git
+[root@master environments]# git push -u  origin master
+
+
+[root@master environments]# cd production/
+data/      hieradata/ manifests/ modules/
+[root@master environments]# cd production/modules/
+[root@master modules]# git clone https://github.com/oracle/fmw-puppet-modules
+
+
+
+setup NAS NFS:
+[root@node1 ~]# cat  /etc/exports
+/repo   *(rw,no_root_squash)
+
+
+
+[root@node1 ~]# systemctl restart nfs
+[root@node1 ~]# systemctl enable  nfs
+[root@node1 ~]# iptables  -F
+
+
+
+
+[root@master ~]# scp  /etc/hosts  node1.example.com:/etc/hosts
+
+
+
+
+[root@master ~]# cd /etc/puppetlabs/code/environments/production/modules/
+
+[root@master modules]# puppet  module generate vimal-nfsshare
+
+
+
+
+/etc/puppetlabs/code/environments/production/modules/nfsshare/manifests
+
+[root@master manifests]# cat  init.pp
+
+class nfsshare {
+
+
+file { 'create mount point':
+        ensure => directory,
+        path    => '/software',
+        mode    => '0755',
+}
+
+
+mount { 'mount NFS NAS location':
+        ensure => mounted,
+        name    => '/software',
+        device  => 'node1.example.com:/repo',
+        fstype  => nfs,
+        options => defaults,
+}
+
+
+
+}
+
+
+[root@master manifests]# vim /etc/puppetlabs/code/environments/production/manifests/site.pp
+
+
+node 'node2.example.com' {
+
+
+        class { 'nfsshare':   }
+
+
+
+}
+
+
+
+At node 2 :
+------------
+
+# puppet agent -t
+
+# df -hT
+
+
+
+
+[root@master fmw_jdk]# cat  /etc/puppetlabs/puppet/hiera.yaml
+---
+:backends:
+  - yaml
+
+
+:hierarchy:
+  - common
+
+:yaml:
+  :datadir: /etc/puppetlabs/code/environments/production/hieradata
+
+
+
+
+
+# cd /etc/puppetlabs/code/environments/production/hieradata
+# 
+
+[root@master hieradata]# cat common.yaml
+---
+name: vimal
+secret: redhat
+
+
+classes:
+  - fmw_jdk::rng_service
+  - fmw_jdk::install
+
+
+java_home_dir:          &java_home_dir          '/usr/java/jdk1.8.0_161'
+fmw_jdk::install::java_home_dir:        *java_home_dir
+fmw_jdk::install::source_file:          '/software/jdk-8u161-linux-x64.tar.gz'
+
+
+
+
+
+# cd /etc/puppetlabs/code/environments/production/modules/fmw_jdk/manifests
+[root@master manifests]# vim install.pp
+line 14:
+
+ if ( $java_home_dir == undef  ) {
+    fail('java_home_dir parameter cannot be empty')
+  }
+  if ( $source_file == undef  ) {
+    fail('source_file parameter cannot be empty')
+  }
+
+
+
+
+
+
+[root@master hieradata]# cat  /etc/puppetlabs/code/environments/production/manifests/site.pp
+
+node 'node2.example.com' {
+
+
+        class { 'nfsshare':   }
+
+        hiera_include('classes')
+
+
+}
+
+
+
+At node 2:
+------------
+# puppet agent -t
+# cd /usr/java/jdk1.8.0_161/
+# rpm -qa | grep rng
+# alternatives --list
+
+
+
+[root@master hieradata]# vim /etc/puppetlabs/code/environments/production/modules/fmw_wls/manifests/install.pp
+
+line 17:
+
+  if ( $java_home_dir == undef  ) {
+    fail("java_home_dir parameter cannot be empty ${java_home_dir}")
+  }
+  if ( $source_file == undef  ) {
+    fail('source_file parameter cannot be empty')
+  }
+
+
+
+
+[root@master hieradata]# cat common.yaml
+---
+name: vimal
+secret: redhat
+
+
+classes:
+  - fmw_jdk::rng_service
+  - fmw_jdk::install
+  - fmw_wls::setup
+  - fmw_wls::install
+
+
+
+# for jdk setup
+java_home_dir:          &java_home_dir          '/usr/java/jdk1.8.0_161'
+fmw_jdk::install::java_home_dir:        *java_home_dir
+fmw_jdk::install::source_file:          '/software/jdk-8u161-linux-x64.tar.gz'
+
+
+# for fmw infra setup
+version:                &version                '12.2.1'
+middleware_home_dir:    &middleware_home_dir    '/opt/oracle/middleware'
+weblogic_home_dir:      &weblogic_home_dir      '/opt/oracle/middleware/wlserver'
+
+
+domain_name:            &domain_name            'base_domain'
+weblogic_password:      &weblogic_password      'Redhat01'
+listen_address:         &listen_address         '192.168.56.103'
+
+fmw_wls::version:                       *version
+fmw_wls::middleware_home_dir:           *middleware_home_dir
+
+
+fmw_wls::install::java_home_dir:        *java_home_dir
+fmw_wls::install::source_file:          '/software/fmw_12.2.1.3.0_infrastructure.jar'
+fmw_wls::install::install_type:         'infra'
+
+
+
+
+
+
+
+# cd /etc/puppetlabs/code/environments/production/modules
+#  puppet module install puppetlabs-powershell
+#  puppet module install puppetlabs-stdlib
+
+
+
+# cd /etc/puppetlabs/code/environments/production/modules/fmw_domain/templates/domain
+# vim domain.py
+
+
+
+# cd /etc/puppetlabs/code/environments/production/modules/fmw_domain/templates/nodemanager
+[root@master nodemanager]# vim nodemanager.properties_12c
+
+
+# cd /etc/puppetlabs/code/environments/production/modules/fmw_domain/files/domain[root@master domain]# vim common.py
+
+
+
+
+[root@master hieradata]# cat common.yaml
+---
+name: vimal
+secret: redhat
+
+
+classes:
+  - fmw_jdk::rng_service
+  - fmw_jdk::install
+  - fmw_wls::setup
+  - fmw_wls::install
+  - fmw_domain::domain
+  - fmw_domain::nodemanager
+  - fmw_domain::adminserver
+
+
+
+# for jdk setup
+java_home_dir:          &java_home_dir          '/usr/java/jdk1.8.0_161'
+fmw_jdk::install::java_home_dir:        *java_home_dir
+fmw_jdk::install::source_file:          '/software/jdk-8u161-linux-x64.tar.gz'
+
+
+# for fmw infra setup
+version:                &version                '12.2.1'
+middleware_home_dir:    &middleware_home_dir    '/opt/oracle/middleware'
+weblogic_home_dir:      &weblogic_home_dir      '/opt/oracle/middleware/wlserver'
+
+
+domain_name:            &domain_name            'base_domain'
+weblogic_password:      &weblogic_password      'Redhat01'
+listen_address:         &listen_address         '192.168.56.103'
+
+fmw_wls::version:                       *version
+fmw_wls::middleware_home_dir:           *middleware_home_dir
+
+
+fmw_wls::install::java_home_dir:        *java_home_dir
+fmw_wls::install::source_file:          '/software/fmw_12.2.1.3.0_infrastructure.jar'
+fmw_wls::install::install_type:         'infra'
+
+
+
+
+fmw_domain::version:                    *version
+fmw_domain::java_home_dir:              *java_home_dir
+fmw_domain::middleware_home_dir:        *middleware_home_dir
+fmw_domain::weblogic_home_dir:          *weblogic_home_dir
+fmw_domain::domain_name:                *domain_name
+fmw_domain::weblogic_password:          *weblogic_password
+fmw_domain::adminserver_listen_address: *listen_address
+fmw_domain::nodemanager_listen_address: *listen_address
+fmw_domain::domains_dir:                '/opt/oracle/wls_domains'
+fmw_domain::apps_dir:                   '/opt/oracle/wls_domains/applications'
+
+fmw_domain::domain::nodemanagers:
+  -
+    id: 'node1'
+    listen_address:  *listen_address
+
+
+
+
+
